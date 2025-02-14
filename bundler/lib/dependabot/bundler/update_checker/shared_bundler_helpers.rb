@@ -1,11 +1,14 @@
+# typed: true
 # frozen_string_literal: true
 
 require "excon"
+require "sorbet-runtime"
 require "uri"
 
 require "dependabot/bundler/update_checker"
 require "dependabot/bundler/native_helpers"
 require "dependabot/bundler/helpers"
+require "dependabot/registry_client"
 require "dependabot/shared_helpers"
 require "dependabot/errors"
 
@@ -13,19 +16,27 @@ module Dependabot
   module Bundler
     class UpdateChecker
       module SharedBundlerHelpers
-        GIT_REGEX = /reset --hard [^\s]*` in directory (?<path>[^\s]*)/.freeze
-        GIT_REF_REGEX = /not exist in the repository (?<path>[^\s]*)\./.freeze
-        PATH_REGEX = /The path `(?<path>.*)` does not exist/.freeze
+        include Kernel
+
+        extend T::Sig
+        extend T::Helpers
+
+        abstract!
+
+        sig { returns(T::Hash[Symbol, T.untyped]) }
+        attr_reader :options
+
+        GIT_REGEX = /reset --hard [^\s]*` in directory (?<path>[^\s]*)/
+        GIT_REF_REGEX = /not exist in the repository (?<path>[^\s]*)\./
+        PATH_REGEX = /The path `(?<path>.*)` does not exist/
 
         module BundlerErrorPatterns
-          MISSING_AUTH_REGEX =
-            /bundle config (?<source>.*) username:password/.freeze
-          BAD_AUTH_REGEX =
-            /Bad username or password for (?<source>.*)\.$/.freeze
-          BAD_CERT_REGEX =
-            /verify the SSL certificate for (?<source>.*)\.$/.freeze
-          HTTP_ERR_REGEX =
-            /Could not fetch specs from (?<source>.*)$/.freeze
+          MISSING_AUTH_REGEX = /bundle config set --global (?<source>.*) username:password/
+
+          BAD_AUTH_REGEX = /Bad username or password for (?<source>.*)\.$/
+          FORBIDDEN_AUTH_REGEX = /Access token could not be authenticated for (?<source>.*)\.$/
+          BAD_CERT_REGEX = /verify the SSL certificate for (?<source>.*)\.$/
+          HTTP_ERR_REGEX = /Could not fetch specs from (?<source>\S+)/
         end
 
         RETRYABLE_ERRORS = %w(
@@ -40,16 +51,18 @@ module Dependabot
           Bundler::Fetcher::FallbackError
         ).freeze
 
-        attr_reader :dependency_files, :repo_contents_path, :credentials
+        attr_reader :dependency_files
+        attr_reader :repo_contents_path
+        attr_reader :credentials
 
         #########################
         # Bundler context setup #
         #########################
 
         def in_a_native_bundler_context(error_handling: true)
-          SharedHelpers.
-            in_a_temporary_repo_directory(base_directory,
-                                          repo_contents_path) do |tmp_dir|
+          SharedHelpers
+            .in_a_temporary_repo_directory(base_directory,
+                                           repo_contents_path) do |tmp_dir|
             write_temporary_dependency_files
 
             yield(tmp_dir)
@@ -93,24 +106,24 @@ module Dependabot
             raise Dependabot::DependencyFileNotEvaluatable, msg
           when "Bundler::Source::Git::MissingGitRevisionError"
             gem_name =
-              error.message.match(GIT_REF_REGEX).
-              named_captures["path"].
-              split("/").last
+              error.message.match(GIT_REF_REGEX)
+                   .named_captures["path"]
+                   .split("/").last
             raise GitDependencyReferenceNotFound, gem_name
           when "Bundler::PathError"
             gem_name =
-              error.message.match(PATH_REGEX).
-              named_captures["path"].
-              split("/").last.split("-")[0..-2].join
+              error.message.match(PATH_REGEX)
+                   .named_captures["path"]
+                   .split("/").last.split("-")[0..-2].join
             raise Dependabot::PathDependenciesNotReachable, [gem_name]
           when "Bundler::Source::Git::GitCommandError"
             if error.message.match?(GIT_REGEX)
               # We couldn't find the specified branch / commit (or the two
               # weren't compatible).
               gem_name =
-                error.message.match(GIT_REGEX).
-                named_captures["path"].
-                split("/").last.split("-")[0..-2].join
+                error.message.match(GIT_REGEX)
+                     .named_captures["path"]
+                     .split("/").last.split("-")[0..-2].join
               raise GitDependencyReferenceNotFound, gem_name
             end
 
@@ -122,7 +135,8 @@ module Dependabot
             # We don't have access to one of repos required
             raise Dependabot::GitDependenciesNotReachable, bad_uris.uniq
           when "Bundler::GemNotFound", "Gem::InvalidSpecificationException",
-               "Bundler::VersionConflict", "Bundler::CyclicDependencyError"
+               "Bundler::VersionConflict", "Bundler::CyclicDependencyError",
+               "Bundler::SolveFailure"
             # Bundler threw an error during resolution. Any of:
             # - the gem doesn't exist in any of the specified sources
             # - the gem wasn't specified properly
@@ -130,6 +144,10 @@ module Dependabot
             raise Dependabot::DependencyFileNotResolvable, msg
           when "Bundler::Fetcher::AuthenticationRequiredError"
             regex = BundlerErrorPatterns::MISSING_AUTH_REGEX
+            source = error.message.match(regex)[:source]
+            raise Dependabot::PrivateSourceAuthenticationFailure, source
+          when "Bundler::Fetcher::AuthenticationForbiddenError"
+            regex = BundlerErrorPatterns::FORBIDDEN_AUTH_REGEX
             source = error.message.match(regex)[:source]
             raise Dependabot::PrivateSourceAuthenticationFailure, source
           when "Bundler::Fetcher::BadAuthenticationError"
@@ -180,12 +198,11 @@ module Dependabot
             )
             git_specs.reject do |spec|
               uri = URI.parse(spec.fetch("auth_uri"))
-              next false unless %w(http https).include?(uri.scheme)
+              next false unless uri.scheme&.match?(/https?/o)
 
-              Excon.get(
-                uri.to_s,
-                idempotent: true,
-                **SharedHelpers.excon_defaults
+              Dependabot::RegistryClient.get(
+                url: uri.to_s,
+                headers: { "Accept-Encoding" => "gzip" }
               ).status == 200
             rescue Excon::Error::Socket, Excon::Error::Timeout
               false
@@ -210,6 +227,9 @@ module Dependabot
           end
         end
 
+        sig { abstract.returns(String) }
+        def bundler_version; end
+
         def write_temporary_dependency_files
           dependency_files.each do |file|
             path = file.name
@@ -221,8 +241,8 @@ module Dependabot
         end
 
         def private_registry_credentials
-          credentials.
-            select { |cred| cred["type"] == "rubygems_server" }
+          credentials
+            .select { |cred| cred["type"] == "rubygems_server" }
         end
 
         def gemfile

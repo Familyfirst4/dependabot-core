@@ -1,3 +1,4 @@
+# typed: true
 # frozen_string_literal: true
 
 require "toml-rb"
@@ -36,11 +37,22 @@ module Dependabot
           end
         end
 
+        def update_python_requirement(requirement)
+          pyproject_object = TomlRB.parse(@pyproject_content)
+          if (python_specification = pyproject_object.dig("tool", "poetry", "dependencies", "python"))
+            python_req = Python::Requirement.new(python_specification)
+            unless python_req.satisfied_by?(requirement)
+              pyproject_object["tool"]["poetry"]["dependencies"]["python"] = "~#{requirement}"
+            end
+          end
+          TomlRB.dump(pyproject_object)
+        end
+
         def sanitize
           # {{ name }} syntax not allowed
-          pyproject_content.
-            gsub(/\{\{.*?\}\}/, "something").
-            gsub('#{', "{")
+          pyproject_content
+            .gsub(/\{\{.*?\}\}/, "something")
+            .gsub('#{', "{")
         end
 
         # rubocop:disable Metrics/PerceivedComplexity
@@ -52,9 +64,10 @@ module Dependabot
           poetry_object = pyproject_object["tool"]["poetry"]
           excluded_names = dependencies.map(&:name) + ["python"]
 
-          Dependabot::Python::FileParser::PoetryFilesParser::POETRY_DEPENDENCY_TYPES.each do |key|
+          Dependabot::Python::FileParser::PyprojectFilesParser::POETRY_DEPENDENCY_TYPES.each do |key|
             next unless poetry_object[key]
 
+            source_types = %w(directory file url)
             poetry_object.fetch(key).each do |dep_name, _|
               next if excluded_names.include?(normalise(dep_name))
 
@@ -62,15 +75,21 @@ module Dependabot
 
               next unless (locked_version = locked_details&.fetch("version"))
 
-              next if %w(directory file url).include?(locked_details&.dig("source", "type"))
+              next if source_types.include?(locked_details&.dig("source", "type"))
 
               if locked_details&.dig("source", "type") == "git"
                 poetry_object[key][dep_name] = {
                   "git" => locked_details&.dig("source", "url"),
                   "rev" => locked_details&.dig("source", "reference")
                 }
+                subdirectory = locked_details&.dig("source", "subdirectory")
+                poetry_object[key][dep_name]["subdirectory"] = subdirectory if subdirectory
               elsif poetry_object[key][dep_name].is_a?(Hash)
                 poetry_object[key][dep_name]["version"] = locked_version
+              elsif poetry_object[key][dep_name].is_a?(Array)
+                # if it has multiple-constraints, locking to a single version is
+                # going to result in a bad lockfile, ignore
+                next
               else
                 poetry_object[key][dep_name] = locked_version
               end
@@ -84,11 +103,12 @@ module Dependabot
 
         private
 
-        attr_reader :pyproject_content, :lockfile
+        attr_reader :pyproject_content
+        attr_reader :lockfile
 
         def locked_details(dep_name)
-          parsed_lockfile.fetch("package").
-            find { |d| d["name"] == normalise(dep_name) }
+          parsed_lockfile.fetch("package")
+                         .find { |d| d["name"] == normalise(dep_name) }
         end
 
         def normalise(name)
