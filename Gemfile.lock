@@ -383,7 +383,7 @@ GEM
     rspec-sorbet (1.9.2)
       sorbet-runtime
     rspec-support (3.13.7)
-    rubocop (1.88.2)
+    rubocop (1.89.0)
       json (~> 2.3)
       language_server-protocol (~> 3.17.0.2)
       lint_roller (~> 1.1.0)
@@ -405,7 +405,7 @@ GEM
       lint_roller (~> 1.1)
       regexp_parser (>= 2.0)
       rubocop (~> 1.86, >= 1.86.2)
-    rubocop-sorbet (0.13.2)
+    rubocop-sorbet (0.14.0)
       lint_roller
       rubocop (>= 1.75.2)
     ruby-progressbar (1.13.0)
@@ -420,14 +420,14 @@ GEM
       simplecov_json_formatter (~> 0.1)
     simplecov-html (0.12.3)
     simplecov_json_formatter (0.1.4)
-    sorbet (0.6.13386)
-      sorbet-static (= 0.6.13386)
-    sorbet-runtime (0.6.13386)
-    sorbet-static (0.6.13386-universal-darwin)
-    sorbet-static (0.6.13386-x86_64-linux)
-    sorbet-static-and-runtime (0.6.13386)
-      sorbet (= 0.6.13386)
-      sorbet-runtime (= 0.6.13386)
+    sorbet (0.6.13426)
+      sorbet-static (= 0.6.13426)
+    sorbet-runtime (0.6.13426)
+    sorbet-static (0.6.13426-universal-darwin)
+    sorbet-static (0.6.13426-x86_64-linux)
+    sorbet-static-and-runtime (0.6.13426)
+      sorbet (= 0.6.13426)
+      sorbet-runtime (= 0.6.13426)
     spoom (1.8.7)
       erubi (>= 1.10.0)
       prism (>= 0.28.0)
@@ -641,11 +641,11 @@ CHECKSUMS
   rspec-mocks (3.13.7) sha256=0979034e64b1d7a838aaaddf12bf065ea4dc40ef3d4c39f01f93ae2c66c62b1c
   rspec-sorbet (1.9.2) sha256=28bf3969fa136ed22edd05b00d23aab52c276f2fcc89fccbb16b8fd0c48931c8
   rspec-support (3.13.7) sha256=0640e5570872aafefd79867901deeeeb40b0c9875a36b983d85f54fb7381c47c
-  rubocop (1.88.2) sha256=8def251c90cd955feb4daa3edc0ab56893250c4ce90ef81e6c80c03f9a939bbf
+  rubocop (1.89.0) sha256=4dee8e3ee9c45e474834efd9e8d6fd031e8331c8dacdff0de4ad65ae0a6faae7
   rubocop-ast (1.50.0) sha256=b9ca88300da0803ee222ad20cdb30494c0a784eed06fdc35d254b06d662788db
   rubocop-performance (1.26.1) sha256=cd19b936ff196df85829d264b522fd4f98b6c89ad271fa52744a8c11b8f71834
   rubocop-rspec (3.10.2) sha256=0b3e2ecc592cd10ecbf0095bb58d1e357905276e069643523cc19eb7495f65e2
-  rubocop-sorbet (0.13.2) sha256=7901e57b6b8e9e9b970d941dbdbb89f2c9de0183bfd2551460468f8aa9548655
+  rubocop-sorbet (0.14.0) sha256=30899556c9d02ab291d8bb761bae1cc025de56f72d909286b6960c1620d67bda
   ruby-progressbar (1.13.0) sha256=80fc9c47a9b640d6834e0dc7b3c94c9df37f08cb072b7761e4a71e22cff29b33
   rubydex (0.3.0-arm64-darwin) sha256=19f685610216e4e7f488722ac90dfbc33113a384dd16db309cf939606f4c32dd
   rubydex (0.3.0-x86_64-linux) sha256=dfe4026591f226b4a1b53f82f86dc14fad2e7c221ee8a5be99a0a46bf2d58b04
@@ -653,11 +653,11 @@ CHECKSUMS
   simplecov (0.22.0) sha256=fe2622c7834ff23b98066bb0a854284b2729a569ac659f82621fc22ef36213a5
   simplecov-html (0.12.3) sha256=4b1aad33259ffba8b29c6876c12db70e5750cb9df829486e4c6e5da4fa0aa07b
   simplecov_json_formatter (0.1.4) sha256=529418fbe8de1713ac2b2d612aa3daa56d316975d307244399fa4838c601b428
-  sorbet (0.6.13386) sha256=8f9cb0771c0843f1f2610847bf38a976716459fbec87b040ba8897414a286aa3
-  sorbet-runtime (0.6.13386) sha256=716aa0a47e75bba1167205d408d59b622db3648109854e9fd309fb901564df48
-  sorbet-static (0.6.13386-universal-darwin) sha256=1d3cfdfd1c57a6108b322fe5d2657da2b4021aa1fed413634762d9c44d4ffea4
-  sorbet-static (0.6.13386-x86_64-linux) sha256=29123908d23ca2bfc135c94c2da698934c74e9fbf02d5855274dc91d71071a93
-  sorbet-static-and-runtime (0.6.13386) sha256=ca4450fa2ef490fd17526eac9e0067fbf2c2b657b83637a9957135658e6b8207
+  sorbet (0.6.13426) sha256=e1f1fc220c37b93e4fe42892cadd2d348876f723c267efd0701ee14a7307c3f8
+  sorbet-runtime (0.6.13426) sha256=6c4edafc6406ff89ba819ac6f5e1441459a2ac36f463f65b04c34cb16213c998
+  sorbet-static (0.6.13426-universal-darwin) sha256=0758b45a87e93a85370fb47584e301c5bc5db8d643605d43f466d8a374a6eb9a
+  sorbet-static (0.6.13426-x86_64-linux) sha256=9f211ec3695f4e8144172156c2f20ca580d46bb1de5cc30dbe40e827c6798510
+  sorbet-static-and-runtime (0.6.13426) sha256=b5cd434598e3de7fa776b5d18fc6483b489ac062b955c51d5c0ec6e968528d10
   spoom (1.8.7) sha256=81960502cdf23aa991f015988aa5dd43325e23ae4318b8e00d541299cbdb70f6
   stackprof (0.2.28) sha256=4ec2ace02f386012b40ca20ef80c030ad711831f59511da12e83b34efb0f9a04
   stringio (3.2.0) sha256=c37cb2e58b4ffbd33fe5cd948c05934af997b36e0b6ca6fdf43afa234cf222e1
